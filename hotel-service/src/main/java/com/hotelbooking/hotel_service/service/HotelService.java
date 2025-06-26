@@ -14,6 +14,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 @Service
 public class HotelService {
@@ -53,6 +55,36 @@ public class HotelService {
         return hotels.stream()
                 .map(h -> new HotelResponse(h, discounted))
                 .toList();
+    }
+
+    public boolean isRoomAvailable(Long hotelId, UUID roomId, LocalDate checkIn, LocalDate checkOut, int guestCount) {
+        Hotel hotel = hotelRepository.findById(hotelId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Hotel not found!"));
+
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found!"));
+
+        if (!Objects.equals(room.getHotel().getId(), hotelId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room does not belong to the specified hotel!");
+        }
+
+        if (room.getCapacity() < guestCount) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room capacity is not enough for the specified guest count!");
+        }
+
+        if (room.getAvailableCount() < guestCount) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room is not available for the specified dates!");
+        }
+
+        boolean exists = roomRepository.existsByIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                roomId,
+                Date.valueOf(checkIn), 
+                Date.valueOf(checkOut)
+        );
+
+        return room.getStartDate().compareTo(Date.valueOf(checkIn)) <= 0 &&
+                room.getEndDate().compareTo(Date.valueOf(checkOut)) >= 0;
+
     }
 
     @Cacheable(value = "hotels-by-location", key = "#location")

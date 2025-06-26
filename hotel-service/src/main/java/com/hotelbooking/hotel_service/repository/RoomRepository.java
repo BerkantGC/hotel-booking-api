@@ -22,5 +22,7 @@ public interface RoomRepository extends JpaRepository<Room, UUID> {
             @Param("roomCount") int roomCount,
             @Param("checkInDate") Date checkIn,
             @Param("checkOutDate") Date checkOut);
+
+    boolean existsByIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(UUID id, Date startDate, Date endDate);
 }
 

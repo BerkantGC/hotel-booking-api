@@ -1,7 +1,5 @@
 package com.hotelbooking.hotel_service.controller;
 
-import com.hotelbooking.common_model.Hotel;
-import com.hotelbooking.common_model.Room;
 import com.hotelbooking.hotel_service.dto.HotelResponse;
 import com.hotelbooking.hotel_service.service.HotelService;
 import com.hotelbooking.hotel_service.util.AuthUtils;
@@ -11,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/hotels")
@@ -25,14 +24,12 @@ public class HotelController {
     @GetMapping
     public ResponseEntity<List<HotelResponse>> getHotels() {
         boolean discounted = AuthUtils.isSignedIn();
-
         return ResponseEntity.ok(hotelService.findAll(discounted));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<HotelResponse> getHotelById(@PathVariable Long id) {
         boolean discounted = AuthUtils.isSignedIn();
-
         return ResponseEntity.ok(hotelService.findById(id, discounted));
     }
 
@@ -44,10 +41,20 @@ public class HotelController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut) {
 
         boolean discounted = AuthUtils.isSignedIn();
-
         List<HotelResponse> response = hotelService.search(location, roomCount, checkIn, checkOut, discounted);
-
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{hotelId}/rooms/{roomId}/availability")
+    public ResponseEntity<Boolean> checkRoomAvailability(
+            @PathVariable Long hotelId,
+            @PathVariable UUID roomId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut,
+            @RequestParam int guestCount) {
+
+        boolean available = hotelService.isRoomAvailable(hotelId, roomId, checkIn, checkOut, guestCount);
+        return ResponseEntity.ok(available);
     }
 
     // Cache management endpoints (for admin use)

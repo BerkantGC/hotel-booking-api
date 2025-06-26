@@ -13,9 +13,11 @@
     <modules>
         <module>gateaway-service</module>
         <module>auth-service</module>
-        <module>hotel-admin-service</module>
-        <module>common-model</module>
         <module>hotel-service</module>
+        <module>booking-service</module>
+        <module>hotel-admin-service</module>
+        <module>notification-service</module>
+        <module>common-model</module>
     </modules>
 
     <!-- Common dependencies can be given here -->
