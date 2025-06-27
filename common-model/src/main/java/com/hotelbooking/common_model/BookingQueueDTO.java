@@ -17,5 +17,6 @@ public class BookingQueueDTO implements Serializable {
     private UUID roomId;
     private LocalDate checkIn;
     private LocalDate checkOut;
+    private Long userId;
     private int guestCount;
 }

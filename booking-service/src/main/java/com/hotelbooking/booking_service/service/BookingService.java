@@ -110,6 +110,7 @@ public class BookingService {
         dto.setGuestCount(booking.getGuestCount());
         dto.setCheckIn(booking.getStartDate().toLocalDate());
         dto.setCheckOut(booking.getEndDate().toLocalDate());
+        dto.setUserId(booking.getUserId());
         dto.setRoomId(booking.getRoomId());
 
         return dto;
