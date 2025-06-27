@@ -1,4 +1,4 @@
-package com.hotelbooking.gateaway_service.Security;
+package com.hotelbooking.gateaway_service.security;
 
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
