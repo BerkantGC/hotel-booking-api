@@ -46,13 +46,13 @@ public class HotelService {
         repository.deleteById(id);
     }
 
-    public Hotel updateHotel(Long id, Hotel updated) {
+    public Hotel updateHotel(Long id, HotelDTO updated) {
         Hotel hotel = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Hotel not found"));
         hotel.setName(updated.getName());
         hotel.setLocation(updated.getLocation());
         hotel.setDescription(updated.getDescription());
-        hotel.setRoomCount(updated.getRoomCount());
+        hotel.setRoomCount(updated.getRoom_count());
         return repository.save(hotel);
     }
 }

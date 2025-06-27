@@ -2,8 +2,10 @@ package com.hotelbooking.hotel_service.service;
 
 import com.hotelbooking.common_model.Hotel;
 import com.hotelbooking.common_model.Room;
+import com.hotelbooking.common_model.RoomAvailability;
 import com.hotelbooking.hotel_service.dto.HotelResponse;
 import com.hotelbooking.hotel_service.repository.HotelRepository;
+import com.hotelbooking.hotel_service.repository.RoomAvailabilityRepository;
 import com.hotelbooking.hotel_service.repository.RoomRepository;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
@@ -21,10 +23,12 @@ import java.util.UUID;
 public class HotelService {
     private final HotelRepository hotelRepository;
     private final RoomRepository roomRepository;
+    private final RoomAvailabilityRepository roomAvailabilityRepository;
 
-    public HotelService(HotelRepository hotelRepository, RoomRepository roomRepository) {
+    public HotelService(HotelRepository hotelRepository, RoomRepository roomRepository, RoomAvailabilityRepository roomAvailabilityRepository) {
         this.hotelRepository = hotelRepository;
         this.roomRepository = roomRepository;
+        this.roomAvailabilityRepository = roomAvailabilityRepository;
     }
 
     // Use separate cache names for different return types
@@ -45,17 +49,18 @@ public class HotelService {
 
     @Cacheable(value = "hotel-search", key = "#location + '-' + #roomCount + '-' + #checkIn + '-' + #checkOut + '-' + #discounted",
     unless = "#result.isEmpty()")
-    public List<HotelResponse> search(String location, int roomCount, LocalDate checkIn, LocalDate checkOut, boolean discounted) {
-        List<Room> rooms = roomRepository.searchRooms(location, roomCount, Date.valueOf(checkIn), Date.valueOf(checkOut));
-        List<Hotel> hotels = rooms.stream()
-                .map(Room::getHotel)
-                .distinct()
+    public List<HotelResponse> search(String location, int guestCount, LocalDate checkIn, LocalDate checkOut, boolean discounted) {
+        List<Hotel> hotels = hotelRepository.findAllByLocationContainingIgnoreCase(location);
+
+        List<Hotel> availableHotels = hotels.stream()
+                .filter(hotel -> hasAvailableRoom(hotel, guestCount, checkIn, checkOut))
                 .toList();
 
-        return hotels.stream()
+        return availableHotels.stream()
                 .map(h -> new HotelResponse(h, discounted))
                 .toList();
     }
+
 
     public boolean isRoomAvailable(Long hotelId, UUID roomId, LocalDate checkIn, LocalDate checkOut, int guestCount) {
         Hotel hotel = hotelRepository.findById(hotelId)
@@ -68,23 +73,38 @@ public class HotelService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room does not belong to the specified hotel!");
         }
 
-        if (room.getCapacity() < guestCount) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room capacity is not enough for the specified guest count!");
+        List<RoomAvailability> availabilities = roomAvailabilityRepository
+                .findByRoomIdAndDateBetween(roomId, checkIn, checkOut.minusDays(1));
+
+        int totalDays = checkIn.until(checkOut).getDays();
+        if (availabilities.size() < totalDays) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room availability data is incomplete.");
         }
 
-        if (room.getAvailableCount() < guestCount) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room is not available for the specified dates!");
+        boolean allAvailable = availabilities.stream()
+                .allMatch(a -> a.getAvailableCount() >= 1); // 1 oda yeterli
+
+        if (!allAvailable) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room is not available for one or more days.");
         }
 
-        boolean exists = roomRepository.existsByIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
-                roomId,
-                Date.valueOf(checkIn), 
-                Date.valueOf(checkOut)
-        );
+        return true;
+    }
 
-        return room.getStartDate().compareTo(Date.valueOf(checkIn)) <= 0 &&
-                room.getEndDate().compareTo(Date.valueOf(checkOut)) >= 0;
+    private boolean hasAvailableRoom(Hotel hotel, int guestCount, LocalDate checkIn, LocalDate checkOut) {
+        for (Room room : hotel.getRooms()) {
+            List<RoomAvailability> availabilities = roomAvailabilityRepository
+                    .findByRoomIdAndDateBetween(room.getId(), checkIn, checkOut.minusDays(1));
 
+            int totalDays = checkIn.until(checkOut).getDays();
+
+            boolean allDaysAvailable = availabilities.size() == totalDays &&
+                    availabilities.stream().allMatch(a -> a.getAvailableCount() >= 1);
+
+            if (allDaysAvailable) return true;
+        }
+
+        return false;
     }
 
     @Cacheable(value = "hotels-by-location", key = "#location")

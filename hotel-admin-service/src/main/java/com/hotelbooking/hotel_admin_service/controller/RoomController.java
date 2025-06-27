@@ -1,43 +1,42 @@
 package com.hotelbooking.hotel_admin_service.controller;
 
-import com.hotelbooking.common_model.Room;
+import com.hotelbooking.common_model.RoomResponse;
 import com.hotelbooking.hotel_admin_service.dto.RoomDTO;
-import com.hotelbooking.hotel_admin_service.repository.HotelRepository;
-import com.hotelbooking.hotel_admin_service.repository.RoomRepository;
+import com.hotelbooking.hotel_admin_service.service.RoomService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.sql.Date;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin/rooms")
 @PreAuthorize("hasRole('ADMIN')")
 public class RoomController {
+    private final RoomService roomService;
 
-    private final RoomRepository roomRepository;
-    private final HotelRepository hotelRepository;
-
-    public RoomController(RoomRepository roomRepository, HotelRepository hotelRepository) {
-        this.roomRepository = roomRepository;
-        this.hotelRepository = hotelRepository;
+    public RoomController(RoomService roomService) {
+        this.roomService = roomService;
     }
 
     @PostMapping
-    public ResponseEntity<Room> createRoom(@Valid @RequestBody RoomDTO roomDTO) {
-        return hotelRepository.findById(roomDTO.getHotelId())
-                .map(hotel -> {
-                    Room room = new Room();
-                    room.setHotel(hotel);
-                    room.setCapacity(roomDTO.getCapacity());
-                    room.setKind(roomDTO.getKind());
-                    room.setStartDate(Date.valueOf(roomDTO.getStartDate()));
-                    room.setEndDate(Date.valueOf(roomDTO.getEndDate()));
-                    room.setAvailableCount(roomDTO.getAvailableCount());
-                    Room saved = roomRepository.save(room);
-                    return ResponseEntity.ok(saved);
-                })
-                .orElse(ResponseEntity.badRequest().build());
+    public ResponseEntity<?> createRoom(@Valid @RequestBody RoomDTO roomDTO) {
+        try {
+            roomService.createRoom(roomDTO);
+        } catch (Exception e) {
+            return ResponseEntity.status(400).build();
+        }
+
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping
+    public ResponseEntity<List<RoomResponse>> getAllRooms() {
+        try {
+            return ResponseEntity.ok(roomService.getRooms());
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400).build();
+        }
     }
 }

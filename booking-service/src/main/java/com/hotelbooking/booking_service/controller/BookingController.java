@@ -4,15 +4,13 @@ import com.hotelbooking.booking_service.dto.BookingRequest;
 import com.hotelbooking.booking_service.model.Booking;
 import com.hotelbooking.booking_service.service.BookingService;
 import com.hotelbooking.booking_service.util.AuthUtils;
+import com.hotelbooking.common_model.BookingQueueDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.logging.Log;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
@@ -37,5 +35,12 @@ public class BookingController {
             log.error("Error creating booking: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
+    }
+
+    @GetMapping("/{id}")
+    public BookingQueueDTO showBooking(@PathVariable Long id) {
+        Long userId = AuthUtils.getUserId();
+
+        return bookingService.showBooking(id, userId);
     }
 }

@@ -39,8 +39,8 @@ public class HotelController {
     }
 
     @PutMapping("/{id}")
-    public Hotel update(@PathVariable Long id, @RequestBody Hotel hotel) {
-        return service.updateHotel(id, hotel);
+    public Hotel update(@PathVariable Long id, @ModelAttribute HotelDTO hotelDTO) {
+        return service.updateHotel(id, hotelDTO);
     }
 
     @DeleteMapping("/{id}")

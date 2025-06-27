@@ -1,0 +1,21 @@
+server:
+  port: 8081
+
+internal:
+  secret:
+    key: oO"kdug32^*Pg`9
+
+booking:
+  service_url: http://localhost:8085
+
+spring:
+  application:
+    name: comment-service
+
+  data:
+    mongodb:
+      uri: mongodb://root:123456@localhost:27017/hotel_comments_db?authSource=admin
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration

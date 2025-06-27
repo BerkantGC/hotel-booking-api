@@ -62,6 +62,19 @@ public class BookingService {
         return booking;
     }
 
+    public BookingQueueDTO showBooking(Long bookingId, Long userId) {
+        log.info("Showing booking for user {}: {}", userId, bookingId);
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+
+        if (!booking.getUserId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Booking not found");
+        }
+
+        return getBookingQueueDTO(booking);
+    }
+
     private boolean isRoomAvailable(Long hotelId, UUID roomId, LocalDate checkIn, LocalDate checkOut, int guestCount) {
         try {
             HttpHeaders headers = new HttpHeaders();

@@ -17,6 +17,7 @@
         <module>booking-service</module>
         <module>hotel-admin-service</module>
         <module>notification-service</module>
+        <module>comment-service</module>
         <module>common-model</module>
     </modules>
 
