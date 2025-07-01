@@ -7,6 +7,7 @@ import com.hotelbooking.hotel_service.dto.HotelResponse;
 import com.hotelbooking.hotel_service.repository.HotelRepository;
 import com.hotelbooking.hotel_service.repository.RoomAvailabilityRepository;
 import com.hotelbooking.hotel_service.repository.RoomRepository;
+import com.hotelbooking.hotel_service.util.AuthUtils;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.HttpStatus;
@@ -39,9 +40,9 @@ public class HotelService {
                 .toList();
     }
 
-    // Use different cache name for single objects
-    @Cacheable(value = "hotel-single", key = "#id + '-' + #discounted")
-    public HotelResponse findById(Long id, boolean discounted) {
+    @Cacheable(value = "hotel-single", key = "#id + '::' + T(com.hotelbooking.hotel_service.util.AuthUtils).isSignedIn()")
+    public HotelResponse findById(Long id) {
+        boolean discounted = AuthUtils.isSignedIn();
         return hotelRepository.findById(id)
                 .map(hotel -> new HotelResponse(hotel, discounted))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Hotel not found!"));

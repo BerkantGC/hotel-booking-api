@@ -29,8 +29,7 @@ public class HotelController {
 
     @GetMapping("/{id}")
     public ResponseEntity<HotelResponse> getHotelById(@PathVariable Long id) {
-        boolean discounted = AuthUtils.isSignedIn();
-        return ResponseEntity.ok(hotelService.findById(id, discounted));
+        return ResponseEntity.ok(hotelService.findById(id));
     }
 
     @GetMapping("/search")

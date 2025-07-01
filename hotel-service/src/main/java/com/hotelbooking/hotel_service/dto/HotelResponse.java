@@ -1,11 +1,14 @@
 package com.hotelbooking.hotel_service.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.hotelbooking.common_model.Hotel;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 
 @Data
+@NoArgsConstructor
 public class HotelResponse implements Serializable {
     private Long id;
     private String name;
@@ -14,6 +17,7 @@ public class HotelResponse implements Serializable {
     private Double starRating;
     private Double price;
     private Integer roomCount;
+    private String image;
 
     public HotelResponse(Hotel hotel, boolean discounted) {
         this.name = hotel.getName();
@@ -24,5 +28,6 @@ public class HotelResponse implements Serializable {
         this.price = discounted ? basePrice * 0.85 : basePrice;
         this.roomCount = hotel.getRoomCount();
         this.id = hotel.getId();
+        this.image = hotel.getImage();
     }
 }
