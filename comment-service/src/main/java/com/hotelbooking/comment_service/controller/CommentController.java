@@ -4,7 +4,9 @@ import com.hotelbooking.comment_service.dto.CommentRequest;
 import com.hotelbooking.comment_service.dto.CommentResponse;
 import com.hotelbooking.comment_service.model.Comment;
 import com.hotelbooking.comment_service.service.CommentService;
+import com.hotelbooking.comment_service.util.AuthUtils;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +25,8 @@ public class CommentController {
 
     @PostMapping
     public ResponseEntity<CommentResponse> createComment(@Valid @RequestBody CommentRequest request) {
+        if(AuthUtils.isSignedIn())
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         Comment created = commentService.createComment(request);
 
         if (created == null) {

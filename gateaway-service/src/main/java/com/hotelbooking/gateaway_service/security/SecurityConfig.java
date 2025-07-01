@@ -35,6 +35,7 @@ public class SecurityConfig {
                         // Actuator endpoints
                         .pathMatchers("/actuator/**").permitAll()
                         .pathMatchers("/api/v1/hotels/**").permitAll()
+                        .pathMatchers("/api/v1/comments/**").permitAll()
                         // Diğer tüm endpoint'ler için authentication gerekli
                         .anyExchange().authenticated()
                 )

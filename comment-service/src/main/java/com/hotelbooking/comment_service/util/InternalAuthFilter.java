@@ -30,16 +30,21 @@ public class InternalAuthFilter implements Filter {
 
         if (incomingSecret == null) {
             chain.doFilter(request, response);
+            System.out.println("No secret header found");
         } else if (!incomingSecret.equals(internalSecretKey)) {
             ((HttpServletResponse) response).sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized gateway");
+            System.out.println("Unauthorized gateway");
         } else {
             if (role != null && id != null) {
                 SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role.toUpperCase());
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(id, null, Collections.singletonList(authority));
                 SecurityContextHolder.getContext().setAuthentication(auth);
+
+                System.out.println("User authenticated");
             }
 
+            System.out.println("User pass");
             chain.doFilter(request, response);
         }
     }
