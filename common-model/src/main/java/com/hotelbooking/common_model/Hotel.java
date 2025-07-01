@@ -20,11 +20,8 @@ public class Hotel {
     private String location;
     private String description;
 
-    private BigDecimal latitude;
-    private BigDecimal longitude;
-
-    @Column(name = "star_rating")
-    private Double starRating;
+    private Double latitude;
+    private Double longitude;
 
     @Column(name = "base_price")
     private BigDecimal basePrice;

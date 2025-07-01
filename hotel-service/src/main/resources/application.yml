@@ -5,6 +5,10 @@ internal:
   secret:
     key: oO"kdug32^*Pg`9
 
+comment:
+  service_url:
+    http://localhost:8081
+
 spring:
   application:
     name: hotel-service

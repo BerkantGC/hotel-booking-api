@@ -46,4 +46,10 @@ public class CommentController {
         response.put("service_ratings", commentService.getAllServiceAverages(comments));
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/get_rating")
+    public ResponseEntity<Double> getHotelRating(@RequestParam Long hotelId) {
+        List<CommentResponse> comments = commentService.getCommentsByHotel(hotelId);
+        return ResponseEntity.ok(commentService.getAverageRatingsByHotel(comments));
+    }
 }
