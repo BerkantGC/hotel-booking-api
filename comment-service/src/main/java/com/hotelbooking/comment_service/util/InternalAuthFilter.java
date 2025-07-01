@@ -44,7 +44,6 @@ public class InternalAuthFilter implements Filter {
                 System.out.println("User authenticated");
             }
 
-            System.out.println("User pass");
             chain.doFilter(request, response);
         }
     }
