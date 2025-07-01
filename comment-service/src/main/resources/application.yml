@@ -8,6 +8,9 @@ internal:
 booking:
   service_url: http://localhost:8085
 
+user:
+  service_url: http://localhost:8087
+
 spring:
   application:
     name: comment-service

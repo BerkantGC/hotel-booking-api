@@ -45,7 +45,6 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
-        System.out.println(request);
         try {
             User user = new User();
 

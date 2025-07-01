@@ -1,5 +1,6 @@
 package com.hotelbooking.comment_service.model;
 
+import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
@@ -33,7 +34,10 @@ public class Comment {
 
     @Field("admin_answer")
     private String adminAnswer;
-
+    
+    @Size(max = 600)
+    private String text;
+    
     private List<ServiceRating> rating;
 
     private Integer days;

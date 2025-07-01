@@ -32,6 +32,7 @@ public class SecurityConfig {
                 .authorizeExchange(exchanges -> exchanges
                         // Auth endpoints - herkese açık
                         .pathMatchers("/api/v1/auth/**").permitAll()
+                        .pathMatchers("/api/v1/users/**").permitAll()
                         // Actuator endpoints
                         .pathMatchers("/actuator/**").permitAll()
                         .pathMatchers("/api/v1/hotels/**").permitAll()

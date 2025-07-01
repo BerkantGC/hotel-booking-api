@@ -43,6 +43,7 @@ public class CommentController {
 
         response.put("comments", comments);
         response.put("overall_rating", commentService.getAverageRatingsByHotel(comments));
+        response.put("service_ratings", commentService.getAllServiceAverages(comments));
         return ResponseEntity.ok(response);
     }
 }
