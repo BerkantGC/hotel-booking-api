@@ -162,6 +162,9 @@ cd [service-name]
 mvn test
 ```
 
+![bookings](https://github.com/user-attachments/assets/891b5825-c554-4eb8-b8e7-ffbfe6afb00c)
+
+
 ## 📖 API Documentation
 ### Main API Endpoints (via Gateway - Port 8080)
 
