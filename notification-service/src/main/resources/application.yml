@@ -5,6 +5,9 @@ internal:
   secret:
     key: oO"kdug32^*Pg`9
 
+socket:
+  service_url: http://localhost:8088
+
 spring:
   application:
     name: notification-service

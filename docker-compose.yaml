@@ -1,26 +1,269 @@
-version: "3.9"
+# Load environment variables from .env file
+x-common-variables: &common-variables
+  env_file:
+    - .env
 
 services:
+  # Infrastructure Services
+  postgresql:
+    image: postgres:15
+    container_name: postgresql
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   mongodb:
     image: mongo:6.0
     container_name: mongo
     ports:
-      - "27017:27017"
+      - "${MONGODB_PORT:-27017}:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: 123456
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
-      - "5672:5672"    # AMQP protocol
-      - "15672:15672"  # Management UI
+      - "${RABBITMQ_AMQP_PORT:-5672}:5672"    # AMQP protocol
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"  # Management UI
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Microservices
+  common-model:
+    build:
+      context: .
+      dockerfile: ./common-model/Dockerfile
+    container_name: common-model
+    volumes:
+      - maven-deps:/root/.m2
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: ./auth-service/Dockerfile
+    container_name: auth-service
+    ports:
+      - "${AUTH_SERVICE_PORT:-8087}:8087"
+    environment:
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      common-model:
+        condition: service_completed_successfully
+    volumes:
+      - maven-deps:/root/.m2
+
+  hotel-service:
+    build:
+      context: .
+      dockerfile: ./hotel-service/Dockerfile
+    container_name: hotel-service
+    ports:
+      - "${HOTEL_SERVICE_PORT:-8084}:8084"
+    environment:
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - INTERNAL_SECRET_KEY=${INTERNAL_SECRET_KEY}
+      - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-redis}
+      - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      common-model:
+        condition: service_completed_successfully
+    volumes:
+      - maven-deps:/root/.m2
+
+  booking-service:
+    build:
+      context: .
+      dockerfile: ./booking-service/Dockerfile
+    container_name: booking-service
+    ports:
+      - "${BOOKING_SERVICE_PORT:-8085}:8085"
+    environment:
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - SPRING_RABBITMQ_HOST=${SPRING_RABBITMQ_HOST}
+      - HOTEL_SERVICE_URL=${HOTEL_SERVICE_URL}
+      - INTERNAL_SECRET_KEY=${INTERNAL_SECRET_KEY}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      hotel-service:
+        condition: service_started
+      common-model:
+        condition: service_completed_successfully
+    volumes:
+      - maven-deps:/root/.m2
+
+  comment-service:
+    build:
+      context: .
+      dockerfile: ./comment-service/Dockerfile
+    container_name: comment-service
+    ports:
+      - "${COMMENT_SERVICE_PORT:-8081}:8081"
+    environment:
+      - SPRING_DATA_MONGODB_URI=${SPRING_DATA_MONGODB_URI}
+      - INTERNAL_SECRET_KEY=${INTERNAL_SECRET_KEY}
+      - BOOKING_SERVICE_URL=${BOOKING_SERVICE_URL}
+      - USER_SERVICE_URL=${USER_SERVICE_URL}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      common-model:
+        condition: service_completed_successfully
+    volumes:
+      - maven-deps:/root/.m2
+
+  hotel-admin-service:
+    build:
+      context: .
+      dockerfile: ./hotel-admin-service/Dockerfile
+    container_name: hotel-admin-service
+    ports:
+      - "${HOTEL_ADMIN_SERVICE_PORT:-8083}:8083"
+    environment:
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - INTERNAL_SECRET_KEY=${INTERNAL_SECRET_KEY}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      common-model:
+        condition: service_completed_successfully
+    volumes:
+      - maven-deps:/root/.m2
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: ./notification-service/Dockerfile
+    container_name: notification-service
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-8082}:8082"
+    environment:
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - SPRING_RABBITMQ_HOST=${SPRING_RABBITMQ_HOST}
+      - INTERNAL_SECRET_KEY=${INTERNAL_SECRET_KEY}
+      - SOCKET_SERVICE_URL=${SOCKET_SERVICE_URL}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      common-model:
+        condition: service_completed_successfully
+    volumes:
+      - maven-deps:/root/.m2
+
+  gateway-service:
+    build:
+      context: .
+      dockerfile: ./gateaway-service/Dockerfile
+    container_name: gateway-service
+    ports:
+      - "${GATEWAY_SERVICE_PORT:-8080}:8080"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_SECRET_KEY=${INTERNAL_SECRET_KEY}
+    depends_on:
+      - auth-service
+      - hotel-service
+      - booking-service
+      - comment-service
+      - hotel-admin-service
+      - notification-service
+    volumes:
+      - maven-deps:/root/.m2
+
+  # Node.js Services
+  ai-agent-service:
+    build:
+      context: .
+      dockerfile: ./ai-agent-service/Dockerfile
+    container_name: ai-agent-service
+    ports:
+      - "${AI_AGENT_SERVICE_PORT:-3001}:3001"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${AI_AGENT_SERVICE_PORT:-3001}
+
+  socket-service:
+    build:
+      context: .
+      dockerfile: ./socket-service/Dockerfile
+    container_name: socket-service
+    ports:
+      - "${SOCKET_SERVICE_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+    depends_on:
+      postgresql:
+        condition: service_healthy
 
 volumes:
+  postgres-data:
   mongo-data:
+  maven-deps:

@@ -32,21 +32,15 @@ public class NotificationController {
         return service.unseenCount(Long.valueOf(principal.getName()));
     }
 
-    @PatchMapping("/{id}/seen")
+    @PutMapping("/{id}/seen")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void markSeen(@PathVariable Long id, Principal principal) {
         service.markSeen(id, Long.valueOf(principal.getName()));
     }
 
-    @PatchMapping("/seen-all")
+    @PutMapping("/seen-all")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void markAllSeen(Principal principal) {
         service.markAllSeen(Long.valueOf(principal.getName()));
-    }
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public NotificationResponse create(@RequestBody CreateNotificationRequest req) {
-        return service.create(req);
     }
 }

@@ -17,6 +17,8 @@ import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
+
 @Configuration
 @EnableWebFluxSecurity
 @EnableReactiveMethodSecurity
@@ -28,16 +30,14 @@ public class SecurityConfig {
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
-                .cors(corsSpec -> corsConfigurationSource())
+                .cors(corsSpec -> corsSpec.configurationSource(corsConfigurationSource()))
                 .authorizeExchange(exchanges -> exchanges
-                        // Auth endpoints - herkese açık
                         .pathMatchers("/api/v1/auth/**").permitAll()
                         .pathMatchers("/api/v1/users/**").permitAll()
-                        // Actuator endpoints
+                        .pathMatchers("/notify/**").permitAll()    // Buraya dikkat!
                         .pathMatchers("/actuator/**").permitAll()
                         .pathMatchers("/api/v1/hotels/**").permitAll()
                         .pathMatchers("/api/v1/comments/**").permitAll()
-                        // Diğer tüm endpoint'ler için authentication gerekli
                         .anyExchange().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
@@ -45,6 +45,7 @@ public class SecurityConfig {
                 )
                 .build();
     }
+
 
     @Bean
     public ReactiveJwtDecoder jwtDecoder() {
@@ -55,7 +56,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+        configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

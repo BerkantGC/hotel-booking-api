@@ -1,8 +1,11 @@
 package com.hotelbooking.gateaway_service.security;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -11,19 +14,17 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.net.URI;
-import java.util.List;
-import java.util.Optional;
 
 @Component
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private final SecretKey key;
 
     @Value("${internal.secret.key}")
@@ -40,14 +41,13 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-
         ServerHttpRequest req = exchange.getRequest();
+        String token = extractToken(req);
 
-        String token = extractBearer(req.getHeaders())
-                .orElseGet(() -> extractFromWsProtocol(req.getHeaders())
-                        .orElseGet(() -> extractFromQuery(req.getURI())));
+        log.info("URI: {} ---> token: {}", req.getURI(), token);
 
         if (token == null) {
+            // No token provided - add internal secret and continue
             return chain.filter(
                     exchange.mutate()
                             .request(req.mutate()
@@ -64,55 +64,50 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                     .getPayload();
 
             String username = claims.getSubject();
-            String role     = claims.get("role", String.class);
-            String id       = String.valueOf(claims.get("id"));
+            String role = claims.get("role", String.class);
+            String id = String.valueOf(claims.get("id"));
 
-            ServerHttpRequest mutated = req.mutate()
+            log.info("User {} with role {} logged in", username, role);
+            // Create mutated request with user info and internal secret
+            ServerHttpRequest.Builder builder = req.mutate()
                     .header("X-User", username)
                     .header("X-User-UserId", id)
                     .header("X-User-Role", role)
-                    .header("X-Internal-Secret", internalSecretKey)
-                    .build();
-
-            URI cleanUri = UriComponentsBuilder
-                    .fromUri(mutated.getURI())
-                    .replaceQueryParam("token")
-                    .build(true)
-                    .toUri();
+                    .header("X-Internal-Secret", internalSecretKey);
 
             return chain.filter(
                     exchange.mutate()
-                            .request(mutated.mutate().uri(cleanUri).build())
+                            .request(builder.uri(req.getURI()).build())
                             .build());
 
-        } catch (Exception e) {
-            System.err.println("❌ JWT validation failed: " + e.getMessage());
+        } catch (JwtException e) {
+            log.error("JWT validation failed for URI {}: {}", req.getURI(), e.getMessage());
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            return exchange.getResponse().setComplete();
+        } catch (Exception e) {
+            log.error("Unexpected error during JWT validation for URI {}: {}", req.getURI(), e.getMessage());
+            exchange.getResponse().setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
             return exchange.getResponse().setComplete();
         }
     }
 
+    /**
+     * Extract token from various sources in order of preference:
+     * 1. Authorization header (Bearer token)
+     * 2. WebSocket protocol header
+     * 3. Query parameter
+     */
+    private String extractToken(ServerHttpRequest request) {
+        return extractBearer(request.getHeaders());
+    }
+
     /** Authorization: Bearer xxx */
-    private Optional<String> extractBearer(HttpHeaders headers) {
-        String h = headers.getFirst(HttpHeaders.AUTHORIZATION);
-        if (h != null && h.startsWith("Bearer ")) return Optional.of(h.substring(7));
-        return Optional.empty();
+    private String extractBearer(HttpHeaders headers) {
+        String authHeader = headers.getFirst(HttpHeaders.AUTHORIZATION);
+        if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        return null;
     }
 
-    /** Sec-WebSocket-Protocol: jwt.xxx  (veya `Bearer,eyJ...`) */
-    private Optional<String> extractFromWsProtocol(HttpHeaders headers) {
-        List<String> protocols = headers.getOrEmpty("Sec-WebSocket-Protocol");
-        return protocols.stream()
-                .filter(p -> p.startsWith("jwt.") || p.startsWith("Bearer "))
-                .map(p -> p.startsWith("Bearer ") ? p.substring(7) : p)
-                .findFirst();
-    }
-
-    /** ws://.../chat?token=xxx */
-    private String extractFromQuery(URI uri) {
-        return UriComponentsBuilder.fromUri(uri)
-                .build()
-                .getQueryParams()
-                .getFirst("token");
-    }
 }
