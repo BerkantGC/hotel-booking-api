@@ -62,7 +62,6 @@ This project follows a microservices architecture with the following services:
 
 4. **Access the services:**
    - API Gateway: http://localhost:8080
-   - Gateway Service Documentation: http://localhost:8080/swagger-ui.html
    - RabbitMQ Management: http://localhost:15672 (guest/guest)
 
 ### Manual Docker Commands
@@ -164,19 +163,6 @@ mvn test
 ```
 
 ## 📖 API Documentation
-
-### Service Endpoints
-
-| Service | Port | Health Check | Documentation |
-|---------|------|--------------|---------------|
-| Gateway | 8080 | `/actuator/health` | `/swagger-ui.html` |
-| Auth | 8087 | `/actuator/health` | `/swagger-ui.html` |
-| Hotel | 8084 | `/actuator/health` | `/swagger-ui.html` |
-| Booking | 8085 | `/actuator/health` | `/swagger-ui.html` |
-| Comment | 8081 | `/actuator/health` | `/swagger-ui.html` |
-| Admin | 8083 | `/actuator/health` | `/swagger-ui.html` |
-| Notification | 8082 | `/actuator/health` | `/swagger-ui.html` |
-
 ### Main API Endpoints (via Gateway - Port 8080)
 
 ```bash
