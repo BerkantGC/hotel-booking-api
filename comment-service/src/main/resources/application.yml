@@ -3,13 +3,13 @@ server:
 
 internal:
   secret:
-    key: oO"kdug32^*Pg`9
+    key: ${INTERNAL_SECRET_KEY:oO"kdug32^*Pg`9}
 
 booking:
-  service_url: http://localhost:8085
+  service_url: ${BOOKING_SERVICE_URL:http://localhost:8085}
 
 user:
-  service_url: http://localhost:8087
+  service_url: ${USER_SERVICE_URL:http://localhost:8087}
 
 spring:
   application:
@@ -17,7 +17,7 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://root:123456@localhost:27017/hotel_comments_db?authSource=admin
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:123456@localhost:27017/hotel_comments_db?authSource=admin}
 
   autoconfigure:
     exclude:

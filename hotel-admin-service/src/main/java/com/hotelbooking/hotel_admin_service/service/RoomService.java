@@ -41,6 +41,7 @@ public class RoomService {
             room = roomRepository.save(room);
         }
 
+        room.setGuestCount(roomDTO.getCapacity());
         LocalDate start = roomDTO.getStartDate();
         LocalDate end = roomDTO.getEndDate();
 

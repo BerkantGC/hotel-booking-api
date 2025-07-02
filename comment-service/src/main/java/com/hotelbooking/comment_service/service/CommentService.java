@@ -8,6 +8,7 @@ import com.hotelbooking.comment_service.repository.CommentRepository;
 import com.hotelbooking.comment_service.util.AuthUtils;
 import com.hotelbooking.common_model.BookingQueueDTO;
 import com.hotelbooking.common_model.User;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -22,6 +23,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+@Slf4j
 @Service
 public class CommentService {
     private final CommentRepository commentRepository;
@@ -43,7 +45,7 @@ public class CommentService {
 
     public Comment createComment(CommentRequest commentReq) {
         BookingQueueDTO booking = getBooking(commentReq.getBookingId());
-
+        log.info("Booking: {}", booking);
         if (booking == null) {
             return null;
         }
