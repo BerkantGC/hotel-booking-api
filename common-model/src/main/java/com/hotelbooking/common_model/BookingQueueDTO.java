@@ -14,6 +14,7 @@ import java.util.UUID;
 public class BookingQueueDTO implements Serializable {
     private Long id;
     private Long hotelId;
+    private String hotelName;
     private UUID roomId;
     private LocalDate checkIn;
     private LocalDate checkOut;

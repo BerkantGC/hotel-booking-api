@@ -14,9 +14,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.awt.print.Book;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -66,6 +68,14 @@ public class BookingService {
         return booking;
     }
 
+    public List<BookingQueueDTO> getBookings(Long userId) {
+        List<Booking> bookings = bookingRepository.findByUserId(userId);
+
+        return bookings.stream()
+                .map(this::getBookingQueueDTO)
+                .toList();
+    }
+
     public BookingQueueDTO showBooking(Long bookingId, Long userId) {
         log.info("Showing booking for user {}: {}", userId, bookingId);
 
@@ -77,6 +87,28 @@ public class BookingService {
         }
 
         return getBookingQueueDTO(booking);
+    }
+
+    public String showHotel(Long hotelId) {
+        try {
+            HttpHeaders headers = getHttpHeaders();
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            String url = String.format("%s/api/v1/hotels/%d", hotelServiceUrl, hotelId);
+
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    Map.class
+            );
+
+            assert response.getBody() != null;
+            return response.getBody().get("name").toString();
+        } catch (Exception e) {
+            System.err.println("Error showing hotel: " + e.getMessage());
+            return "Hotel not found";
+        }
     }
 
     private boolean isRoomAvailable(Long hotelId, UUID roomId, LocalDate checkIn, LocalDate checkOut, int guestCount) {
@@ -130,6 +162,7 @@ public class BookingService {
 
         dto.setId(booking.getId());
         dto.setHotelId(booking.getHotelId());
+        dto.setHotelName(showHotel(booking.getHotelId()));
         dto.setGuestCount(booking.getGuestCount());
         dto.setCheckIn(booking.getStartDate().toLocalDate());
         dto.setCheckOut(booking.getEndDate().toLocalDate());

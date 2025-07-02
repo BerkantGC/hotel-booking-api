@@ -37,6 +37,13 @@ public class BookingController {
         }
     }
 
+    @GetMapping("/my_bookings")
+    public ResponseEntity<Iterable<BookingQueueDTO>> getBookings() {
+        Long userId = AuthUtils.getUserId();
+
+        return ResponseEntity.ok(bookingService.getBookings(userId));
+    }
+
     @GetMapping("/{id}")
     public BookingQueueDTO showBooking(@PathVariable Long id) {
         Long userId = AuthUtils.getUserId();
