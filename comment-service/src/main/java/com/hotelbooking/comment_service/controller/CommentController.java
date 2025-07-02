@@ -25,7 +25,7 @@ public class CommentController {
 
     @PostMapping
     public ResponseEntity<CommentResponse> createComment(@Valid @RequestBody CommentRequest request) {
-        if(AuthUtils.isSignedIn())
+        if(!AuthUtils.isSignedIn())
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         Comment created = commentService.createComment(request);
 

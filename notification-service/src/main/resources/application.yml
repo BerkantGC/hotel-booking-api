@@ -6,22 +6,22 @@ internal:
     key: oO"kdug32^*Pg`9
 
 socket:
-  service_url: http://localhost:8088
+  service_url: ${SOCKET_SERVICE_URL:http://localhost:3000}
 
 spring:
   application:
     name: notification-service
 
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/hoteldb
-    username: berkantgc
-    password:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/hoteldb}
+    username: ${SPRING_DATASOURCE_USERNAME:berkantgc}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: org.postgresql.Driver
 
   jpa:

@@ -16,6 +16,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    networks:
+      - hotel-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 30s
@@ -32,6 +34,8 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - mongo-data:/data/db
+    networks:
+      - hotel-network
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 30s
@@ -47,6 +51,8 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    networks:
+      - hotel-network
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 30s
@@ -58,6 +64,8 @@ services:
     container_name: redis
     ports:
       - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - hotel-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
@@ -70,6 +78,8 @@ services:
       context: .
       dockerfile: ./common-model/Dockerfile
     container_name: common-model
+    networks:
+      - hotel-network
     volumes:
       - maven-deps:/root/.m2
 
@@ -85,6 +95,8 @@ services:
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
+    networks:
+      - hotel-network
     depends_on:
       postgresql:
         condition: service_healthy
@@ -107,6 +119,9 @@ services:
       - INTERNAL_SECRET_KEY=${INTERNAL_SECRET_KEY}
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-redis}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
+      - COMMENT_SERVICE_URL=${COMMENT_SERVICE_URL}
+    networks:
+      - hotel-network
     depends_on:
       postgresql:
         condition: service_healthy
@@ -131,6 +146,8 @@ services:
       - SPRING_RABBITMQ_HOST=${SPRING_RABBITMQ_HOST}
       - HOTEL_SERVICE_URL=${HOTEL_SERVICE_URL}
       - INTERNAL_SECRET_KEY=${INTERNAL_SECRET_KEY}
+    networks:
+      - hotel-network
     depends_on:
       postgresql:
         condition: service_healthy
@@ -155,6 +172,8 @@ services:
       - INTERNAL_SECRET_KEY=${INTERNAL_SECRET_KEY}
       - BOOKING_SERVICE_URL=${BOOKING_SERVICE_URL}
       - USER_SERVICE_URL=${USER_SERVICE_URL}
+    networks:
+      - hotel-network
     depends_on:
       mongodb:
         condition: service_healthy
@@ -179,6 +198,8 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_REGION=${AWS_REGION}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+    networks:
+      - hotel-network
     depends_on:
       postgresql:
         condition: service_healthy
@@ -201,6 +222,8 @@ services:
       - SPRING_RABBITMQ_HOST=${SPRING_RABBITMQ_HOST}
       - INTERNAL_SECRET_KEY=${INTERNAL_SECRET_KEY}
       - SOCKET_SERVICE_URL=${SOCKET_SERVICE_URL}
+    networks:
+      - hotel-network
     depends_on:
       postgresql:
         condition: service_healthy
@@ -221,6 +244,14 @@ services:
     environment:
       - JWT_SECRET=${JWT_SECRET}
       - INTERNAL_SECRET_KEY=${INTERNAL_SECRET_KEY}
+      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://auth-service:8087}
+      - COMMENT_SERVICE_URL=${COMMENT_SERVICE_URL:-http://comment-service:8081}
+      - NOTIFICATION_SERVICE_URL=${NOTIFICATION_SERVICE_URL:-http://notification-service:8082}
+      - HOTEL_ADMIN_SERVICE_URL=${HOTEL_ADMIN_SERVICE_URL:-http://hotel-admin-service:8083}
+      - HOTEL_SERVICE_URL=${HOTEL_SERVICE_URL:-http://hotel-service:8084}
+      - BOOKING_SERVICE_URL=${BOOKING_SERVICE_URL:-http://booking-service:8085}
+    networks:
+      - hotel-network
     depends_on:
       - auth-service
       - hotel-service
@@ -242,6 +273,8 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV}
       - PORT=${AI_AGENT_SERVICE_PORT:-3001}
+    networks:
+      - hotel-network
 
   socket-service:
     build:
@@ -259,6 +292,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
       - INTERNAL_SECRET=${INTERNAL_SECRET}
+    networks:
+      - hotel-network
     depends_on:
       postgresql:
         condition: service_healthy
@@ -267,3 +302,7 @@ volumes:
   postgres-data:
   mongo-data:
   maven-deps:
+
+networks:
+  hotel-network:
+    driver: bridge

@@ -2,8 +2,7 @@ server:
   port: 8081
 
 internal:
-  secret:
-    key: ${INTERNAL_SECRET_KEY:oO"kdug32^*Pg`9}
+  secret: ${INTERNAL_SECRET:oO"kdug32^*Pg`9}
 
 booking:
   service_url: ${BOOKING_SERVICE_URL:http://localhost:8085}
@@ -17,7 +16,7 @@ spring:
 
   data:
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:123456@localhost:27017/hotel_comments_db?authSource=admin}
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://${MONGO_INITDB_ROOT_USERNAME:root}:${MONGO_INITDB_ROOT_PASSWORD:123456}@mongodb:27017/hotel_comments_db?authSource=admin}
 
   autoconfigure:
     exclude:

@@ -15,8 +15,8 @@ import java.util.Collections;
 @Component
 public class InternalAuthFilter implements Filter {
 
-    @Value("${internal.secret.key}")
-    private String internalSecretKey;
+    @Value("${internal.secret}")
+    private String internalSecret;
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -27,24 +27,29 @@ public class InternalAuthFilter implements Filter {
         String role = req.getHeader("X-User-Role");
         String id = req.getHeader("X-User-UserId");
 
-
+        // For non-internal requests (no secret), require authentication
         if (incomingSecret == null) {
-            chain.doFilter(request, response);
             System.out.println("No secret header found");
-        } else if (!incomingSecret.equals(internalSecretKey)) {
-            ((HttpServletResponse) response).sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized gateway");
-            System.out.println("Unauthorized gateway");
-        } else {
-            if (role != null && id != null) {
-                SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role.toUpperCase());
-                UsernamePasswordAuthenticationToken auth =
-                        new UsernamePasswordAuthenticationToken(id, null, Collections.singletonList(authority));
-                SecurityContextHolder.getContext().setAuthentication(auth);
-
-                System.out.println("User authenticated");
-            }
-
-            chain.doFilter(request, response);
+            ((HttpServletResponse) response).sendError(HttpServletResponse.SC_UNAUTHORIZED, "No authentication provided");
+            return;
         }
+
+        // For internal requests, validate the secret
+        if (!incomingSecret.equals(internalSecret)) {
+            System.out.println("Unauthorized gateway");
+            ((HttpServletResponse) response).sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized gateway");
+            return;
+        }
+
+        // For valid internal requests, set up authentication if user info is provided
+        if (role != null && id != null) {
+            SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role.toUpperCase());
+            UsernamePasswordAuthenticationToken auth =
+                    new UsernamePasswordAuthenticationToken(id, null, Collections.singletonList(authority));
+            SecurityContextHolder.getContext().setAuthentication(auth);
+            System.out.println("User authenticated with ID: " + id + " and role: " + role);
+        }
+
+        chain.doFilter(request, response);
     }
 }

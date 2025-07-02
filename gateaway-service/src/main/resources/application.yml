@@ -28,17 +28,17 @@ spring:
         webflux:
           routes:
             - id: auth-service
-              uri: http://auth-service:8087
+              uri: ${AUTH_SERVICE_URL:http://auth-service:8087}
               predicates:
                 - Path=/api/v1/auth/**, /api/v1/users/**
 
             - id: comment-service
-              uri: http://comment-service:8081
+              uri: ${COMMENT_SERVICE_URL:http://comment-service:8081}
               predicates:
                 - Path=/api/v1/comments/**
 
             - id: notification-service-websocket
-              uri: http://notification-service:8082
+              uri: ${NOTIFICATION_SERVICE_URL:http://notification-service:8082}
               predicates:
                 - Path=/notify/**
               filters:
@@ -46,21 +46,21 @@ spring:
 
             # REST
             - id: notification-service-http
-              uri: http://notification-service:8082
+              uri: ${NOTIFICATION_SERVICE_URL:http://notification-service:8082}
               predicates:
                 - Path=/api/v1/notifications/**
 
             - id: hotel-admin
-              uri: http://hotel-admin-service:8083
+              uri: ${HOTEL_ADMIN_SERVICE_URL:http://hotel-admin-service:8083}
               predicates:
                 - Path=/api/v1/admin/**
 
             - id: hotel-service
-              uri: http://hotel-service:8084
+              uri: ${HOTEL_SERVICE_URL:http://hotel-service:8084}
               predicates:
                 - Path=/api/v1/hotels/**
 
             - id: booking-service
-              uri: http://booking-service:8085
+              uri: ${BOOKING_SERVICE_URL:http://booking-service:8085}
               predicates:
                 - Path=/api/v1/bookings/**
