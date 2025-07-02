@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 public class HotelDTO {
@@ -13,6 +15,9 @@ public class HotelDTO {
     private MultipartFile image;
     private String location;
     private String description;
+    private Double latitude;
+    private Double longitude;
+    private BigDecimal basePrice;
     @JsonProperty("room_count")
     private Integer room_count;
 }

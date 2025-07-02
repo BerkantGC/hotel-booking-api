@@ -1,6 +1,7 @@
 package com.hotelbooking.common_model;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -26,8 +27,8 @@ public class Hotel {
     @Column(name = "max_capacity")
     private Long maxCapacity;
 
-    @Column(name = "base_price")
-    private BigDecimal basePrice;
+    @Column(name = "base_price", nullable = false)
+    private BigDecimal basePrice = BigDecimal.ZERO;
 
     @Column(name = "room_count", nullable = false)
     private Integer roomCount;

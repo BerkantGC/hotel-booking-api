@@ -32,6 +32,9 @@ public class HotelService {
             hotel.setDescription(hotelDTO.getDescription());
             hotel.setRoomCount(hotelDTO.getRoom_count());
             hotel.setAdminId(adminId);
+            hotel.setLatitude(hotelDTO.getLatitude());
+            hotel.setLongitude(hotelDTO.getLongitude());
+            hotel.setBasePrice(hotelDTO.getBasePrice());
 
             String imageURL = imageUtils.saveImageFile(hotelDTO.getImage(), "_hotel_admin_id_" + adminId);
             hotel.setImage(imageURL);
