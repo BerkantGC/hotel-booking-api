@@ -5,10 +5,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface RoomAvailabilityRepository extends JpaRepository<RoomAvailability, Long> {
     boolean existsByAvailableCountGreaterThanAndDateBetween(int count, LocalDate startDate, LocalDate endDate);
     List<RoomAvailability> findByRoomIdAndDateBetween(UUID roomId, LocalDate checkIn, LocalDate checkOut);
     List<RoomAvailability> findByRoomId(UUID roomId);
+
+    Optional<RoomAvailability> findByRoomIdAndDate(UUID roomId, LocalDate date);
 }

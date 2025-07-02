@@ -16,6 +16,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.Date;
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -56,8 +58,10 @@ public class BookingService {
 
         booking = bookingRepository.save(booking);
 
-        // Send event to RabbitMQ
-        rabbitTemplate.convertAndSend(RabbitMQConfig.RESERVATION_QUEUE, getBookingQueueDTO(booking));
+        // move booking dto to other services to update availability after booking and send to queue
+        BookingQueueDTO dto = getBookingQueueDTO(booking);
+        updateAvailabilityAfterBooking(dto);
+        rabbitTemplate.convertAndSend(RabbitMQConfig.RESERVATION_QUEUE, dto);
 
         return booking;
     }
@@ -77,10 +81,7 @@ public class BookingService {
 
     private boolean isRoomAvailable(Long hotelId, UUID roomId, LocalDate checkIn, LocalDate checkOut, int guestCount) {
         try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("X-Internal-Secret", internalSecretKey);
-            headers.set("X-User-UserId", AuthUtils.getUserId().toString());
-            headers.set("X-User-Role", AuthUtils.getUserRole()[0]);
+            HttpHeaders headers = getHttpHeaders();
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
             String url = String.format("%s/api/v1/hotels/%d/rooms/%s/availability?checkIn=%s&checkOut=%s&guestCount=%d",
@@ -102,6 +103,28 @@ public class BookingService {
         }
     }
 
+    public void updateAvailabilityAfterBooking(BookingQueueDTO dto) {
+        try {
+            Long hotelId = dto.getHotelId();
+            HttpHeaders headers = getHttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("roomId", dto.getRoomId().toString());
+            requestBody.put("checkIn", dto.getCheckIn());
+            requestBody.put("checkOut", dto.getCheckOut());
+            requestBody.put("guestCount", dto.getGuestCount());
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+            String url = String.format("%s/api/v1/hotels/%d/update_availability", hotelServiceUrl, hotelId);
+            restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error updating availability after booking: " + e.getMessage());
+        }
+    }
+
+
     private BookingQueueDTO getBookingQueueDTO(Booking booking){
         BookingQueueDTO dto = new BookingQueueDTO();
 
@@ -114,5 +137,14 @@ public class BookingService {
         dto.setRoomId(booking.getRoomId());
 
         return dto;
+    }
+
+    private HttpHeaders getHttpHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Internal-Secret", internalSecretKey);
+        headers.set("X-User-UserId", AuthUtils.getUserId().toString());
+        headers.set("X-User-Role", AuthUtils.getUserRole()[0]);
+
+        return headers;
     }
 }

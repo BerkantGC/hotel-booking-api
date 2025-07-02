@@ -1,5 +1,6 @@
 package com.hotelbooking.hotel_service.controller;
 
+import com.hotelbooking.common_model.BookingQueueDTO;
 import com.hotelbooking.hotel_service.dto.HotelResponse;
 import com.hotelbooking.hotel_service.dto.RoomResponse;
 import com.hotelbooking.hotel_service.service.HotelService;
@@ -68,6 +69,15 @@ public class HotelController {
 
         boolean available = hotelService.isRoomAvailable(hotelId, roomId, checkIn, checkOut, guestCount);
         return ResponseEntity.ok(available);
+    }
+
+    @PostMapping("/{hotelId}/update_availability")
+    public ResponseEntity<String> updateAvailabilityAfterBooking(
+            @PathVariable Long hotelId,
+            @RequestBody BookingQueueDTO request
+    ) {
+        hotelService.updateAvailability(hotelId, request);
+        return ResponseEntity.ok("Availability updated successfully");
     }
 
     // Cache management endpoints (for admin use)

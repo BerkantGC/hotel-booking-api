@@ -1,9 +1,6 @@
 package com.hotelbooking.hotel_service.service;
 
-import com.hotelbooking.common_model.Hotel;
-import com.hotelbooking.common_model.Room;
-import com.hotelbooking.common_model.RoomAvailability;
-import com.hotelbooking.common_model.RoomAvailabilityResponse;
+import com.hotelbooking.common_model.*;
 import com.hotelbooking.hotel_service.dto.HotelResponse;
 import com.hotelbooking.hotel_service.dto.RoomResponse;
 import com.hotelbooking.hotel_service.repository.HotelRepository;
@@ -151,7 +148,7 @@ public class HotelService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room is not available for one or more days.");
         }
 
-        return true;
+        return room.getGuestCount() >= guestCount;
     }
 
     private boolean hasAvailableRoom(Hotel hotel, int guestCount, LocalDate checkIn, LocalDate checkOut) {
@@ -170,6 +167,35 @@ public class HotelService {
         return false;
     }
 
+    public void updateAvailability(Long hotelId, BookingQueueDTO request) {
+        Hotel hotel = hotelRepository.findById(hotelId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Hotel not found!"));
+
+        Room room = roomRepository.findById(request.getRoomId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found!"));
+
+        if (!room.getHotel().getId().equals(hotelId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room does not belong to hotel");
+        }
+        LocalDate checkIn = request.getCheckIn();
+        LocalDate checkOut = request.getCheckOut();
+        int guestCount = request.getGuestCount();
+        int totalDays = checkIn.until(checkOut).getDays();
+
+        for (int i = 0; i < totalDays; i++) {
+            LocalDate date = checkIn.plusDays(i);
+            RoomAvailability availability = roomAvailabilityRepository
+                    .findByRoomIdAndDate(request.getRoomId(), date)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Availability not found for date: " + date));
+
+            if (availability.getAvailableCount() < 1) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room not available on " + date);
+            }
+
+            availability.setAvailableCount(availability.getAvailableCount() - 1);
+            roomAvailabilityRepository.save(availability);
+        }
+    }
     @Cacheable(value = "hotels-by-location", key = "#location")
     public List<Hotel> findByLocation(String location) {
         System.out.println("Fetching hotels by location: " + location + " from database...");
