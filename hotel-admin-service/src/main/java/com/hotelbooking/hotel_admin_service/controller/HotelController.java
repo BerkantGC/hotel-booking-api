@@ -2,6 +2,7 @@ package com.hotelbooking.hotel_admin_service.controller;
 
 import com.hotelbooking.hotel_admin_service.dto.HotelDTO;
 import com.hotelbooking.common_model.Hotel;
+import com.hotelbooking.hotel_admin_service.dto.HotelResponse;
 import com.hotelbooking.hotel_admin_service.service.HotelService;
 import com.hotelbooking.hotel_admin_service.util.AuthUtils;
 import org.springframework.http.HttpStatus;
@@ -23,7 +24,7 @@ public class HotelController {
     }
 
     @GetMapping
-    public List<Hotel> getAll() {
+    public List<HotelResponse> getAll() {
         return service.getAllHotels(AuthUtils.getUserId());
     }
 

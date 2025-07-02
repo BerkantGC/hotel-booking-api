@@ -2,12 +2,14 @@ package com.hotelbooking.hotel_admin_service.service;
 
 import com.hotelbooking.hotel_admin_service.dto.HotelDTO;
 import com.hotelbooking.common_model.Hotel;
+import com.hotelbooking.hotel_admin_service.dto.HotelResponse;
 import com.hotelbooking.hotel_admin_service.repository.HotelRepository;
 import com.hotelbooking.hotel_admin_service.util.ImageUtils;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.ArrayList;
 
 @Service
 public class HotelService {
@@ -20,9 +22,27 @@ public class HotelService {
         this.imageUtils = imageUtils;
     }
 
-    public List<Hotel> getAllHotels(Long adminId) {
-        return repository.findAllByAdminId(adminId);
+public List<HotelResponse> getAllHotels(Long adminId) {
+    List<Hotel> hotels = repository.findAllByAdminId(adminId);
+    List<HotelResponse> hotelDTOs = new ArrayList<>();
+
+    for (Hotel hotel : hotels) {
+        HotelResponse dto = new HotelResponse();
+        dto.setId(hotel.getId());
+        dto.setName(hotel.getName());
+        dto.setLocation(hotel.getLocation());
+        dto.setDescription(hotel.getDescription());
+        dto.setRoom_count(hotel.getRoomCount());
+        dto.setLatitude(hotel.getLatitude());
+        dto.setLongitude(hotel.getLongitude());
+        dto.setBasePrice(hotel.getBasePrice());
+        dto.setImage(hotel.getImage());
+        hotelDTOs.add(dto);
     }
+
+    return hotelDTOs;
+}
+    
 
     public Hotel addHotel(HotelDTO hotelDTO, Long adminId) {
         try {
