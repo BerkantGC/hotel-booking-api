@@ -10,4 +10,5 @@ import java.util.UUID;
 public interface RoomAvailabilityRepository extends JpaRepository<RoomAvailability, Long> {
     boolean existsByAvailableCountGreaterThanAndDateBetween(int count, LocalDate startDate, LocalDate endDate);
     List<RoomAvailability> findByRoomIdAndDateBetween(UUID roomId, LocalDate checkIn, LocalDate checkOut);
+    List<RoomAvailability> findByRoomId(UUID roomId);
 }

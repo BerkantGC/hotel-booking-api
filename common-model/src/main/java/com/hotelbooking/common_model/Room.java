@@ -19,6 +19,9 @@ public class Room {
     @GeneratedValue
     private UUID id;
 
+    @Column(name = "guest_count")
+    private int guestCount;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "hotel_id", nullable = false)
     private Hotel hotel;

@@ -1,6 +1,7 @@
 package com.hotelbooking.hotel_service.controller;
 
 import com.hotelbooking.hotel_service.dto.HotelResponse;
+import com.hotelbooking.hotel_service.dto.RoomResponse;
 import com.hotelbooking.hotel_service.service.HotelService;
 import com.hotelbooking.hotel_service.util.AuthUtils;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -41,6 +42,19 @@ public class HotelController {
 
         boolean discounted = AuthUtils.isSignedIn();
         List<HotelResponse> response = hotelService.search(location, roomCount, checkIn, checkOut, discounted);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/rooms")
+    public ResponseEntity<List<RoomResponse>> getHotelRooms(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "1") int guestCount,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut
+    ) {
+        System.out.println("Fetching rooms for hotel ID: " + id + " with dates: " + checkIn + " - " + checkOut);
+        List<RoomResponse> response = hotelService.getHotelRooms(id, checkIn, checkOut, guestCount);
+
         return ResponseEntity.ok(response);
     }
 

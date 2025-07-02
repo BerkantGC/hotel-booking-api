@@ -1,14 +1,16 @@
 package com.hotelbooking.hotel_service.service;
 
-import com.hotelbooking.common_model.BookingQueueDTO;
 import com.hotelbooking.common_model.Hotel;
 import com.hotelbooking.common_model.Room;
 import com.hotelbooking.common_model.RoomAvailability;
+import com.hotelbooking.common_model.RoomAvailabilityResponse;
 import com.hotelbooking.hotel_service.dto.HotelResponse;
+import com.hotelbooking.hotel_service.dto.RoomResponse;
 import com.hotelbooking.hotel_service.repository.HotelRepository;
 import com.hotelbooking.hotel_service.repository.RoomAvailabilityRepository;
 import com.hotelbooking.hotel_service.repository.RoomRepository;
 import com.hotelbooking.hotel_service.util.AuthUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
@@ -17,12 +19,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.sql.Date;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class HotelService {
     @Value("${comment.service_url}")
@@ -73,6 +76,54 @@ public class HotelService {
                 .toList();
     }
 
+    public List<RoomResponse> getHotelRooms(Long id, LocalDate checkIn, LocalDate checkOut, int guestCount) {
+        Hotel hotel = hotelRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Hotel not found!"));
+        
+        List<Room> rooms = hotel.getRooms();
+        List<RoomResponse> roomRespons = new ArrayList<>();
+        
+        // If dates are provided, check availability
+        if (checkIn != null && checkOut != null) {
+            log.info("Checking room availability for hotel ID: " + id + " with dates: " + checkIn + " - " + checkOut);
+            
+            for (Room room : rooms) {
+                List<RoomAvailability> availabilities = roomAvailabilityRepository
+                        .findByRoomIdAndDateBetween(room.getId(), checkIn, checkOut.minusDays(1));
+                
+                int totalDays = checkIn.until(checkOut).getDays();
+                boolean isAvailable = availabilities.size() == totalDays &&
+                        availabilities.stream().allMatch(a -> a.getAvailableCount() >= 1);
+                
+                if (isAvailable) {
+                    RoomResponse roomResponse = new RoomResponse(room, guestCount <= room.getGuestCount());
+                    roomResponse.setAvailablityList(availabilities.stream().map(roomAvailability -> new RoomAvailabilityResponse(roomAvailability.getAvailableCount(), roomAvailability.getDate())).toList());
+                    roomRespons.add(roomResponse);
+                } else {
+                    List<RoomAvailability> roomAvailabilities = roomAvailabilityRepository.findByRoomId(room.getId());
+                    RoomResponse roomResponse = new RoomResponse(room, false);
+                    roomResponse.setAvailablityList(roomAvailabilities.stream().map(roomAvailability ->
+                            new com.hotelbooking.common_model.RoomAvailabilityResponse(roomAvailability.getAvailableCount(), roomAvailability.getDate())
+                    ).toList());
+                    roomRespons.add(roomResponse);
+                }
+            }
+        } else {
+            roomRespons = rooms.stream()
+                    .map(room -> {
+                        List<RoomAvailability> roomAvailabilities = roomAvailabilityRepository.findByRoomId(room.getId());
+                        RoomResponse roomResponse = new RoomResponse(room, guestCount <= room.getGuestCount());
+                        roomResponse.setAvailablityList(roomAvailabilities.stream().map(roomAvailability ->
+                                new com.hotelbooking.common_model.RoomAvailabilityResponse(roomAvailability.getAvailableCount(), roomAvailability.getDate())
+                        ).toList());
+
+                        return roomResponse;
+                    })
+                    .toList();
+        }
+
+        return roomRespons;
+    }
 
     public boolean isRoomAvailable(Long hotelId, UUID roomId, LocalDate checkIn, LocalDate checkOut, int guestCount) {
         Hotel hotel = hotelRepository.findById(hotelId)

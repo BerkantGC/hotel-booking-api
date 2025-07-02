@@ -23,6 +23,9 @@ public class Hotel {
     private Double latitude;
     private Double longitude;
 
+    @Column(name = "max_capacity")
+    private Long maxCapacity;
+
     @Column(name = "base_price")
     private BigDecimal basePrice;
 
