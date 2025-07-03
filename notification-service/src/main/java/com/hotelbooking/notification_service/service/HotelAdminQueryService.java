@@ -22,7 +22,7 @@ public class HotelAdminQueryService {
 
         for (Hotel hotel : hotels) {
             int capacity = hotelClient.getCapacityForDate(hotel.getId(), date); // Total rooms
-            int available = hotelClient.getAvailableRooms(hotel.getId(), date); // Rooms available
+            int available = Integer.parseInt(hotelClient.getAvailableRooms(hotel.getId(), date)); // Rooms available
 
             int percentAvailable = (int) (((double) available / capacity) * 100);
             if (percentAvailable < thresholdPercentage) {
