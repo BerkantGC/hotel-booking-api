@@ -2,6 +2,8 @@
 
 A comprehensive microservices-based hotel booking system built with Spring Boot and Node.js, featuring a complete hotel management, booking, and notification system.
 
+## URI: http://35.240.79.27:8080/
+
 ## 🏗️ Architecture Overview
 
 This project follows a microservices architecture with the following services:
