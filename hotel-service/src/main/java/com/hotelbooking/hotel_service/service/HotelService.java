@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -21,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -51,6 +54,16 @@ public class HotelService {
                 .toList();
     }
 
+    // New paginated method
+    @Cacheable(value = "hotel-list-paged", key = "'all-' + #discounted + '-page-' + #pageable.pageNumber + '-size-' + #pageable.pageSize")
+    public PagedResponse<HotelResponse> findAllPaged(boolean discounted, Pageable pageable) {
+        Page<Hotel> hotelPage = hotelRepository.findAll(pageable);
+        List<HotelResponse> content = hotelPage.getContent().stream()
+                .map(hotel -> new HotelResponse(hotel, discounted, getHotelRating(hotel.getId()) != null ? getHotelRating(hotel.getId()) : 0.0))
+                .toList();
+        return new PagedResponse<>(content, hotelPage.getNumber(), hotelPage.getSize(), hotelPage.getTotalElements());
+    }
+
     @Cacheable(value = "hotel-single", key = "#id + '::' + T(com.hotelbooking.hotel_service.util.AuthUtils).isSignedIn()")
     public HotelResponse findById(Long id) {
         boolean discounted = AuthUtils.isSignedIn();
@@ -71,6 +84,30 @@ public class HotelService {
         return availableHotels.stream()
                 .map(h -> new HotelResponse(h, discounted, getHotelRating(h.getId()) != null ? getHotelRating(h.getId()) : 0.0))
                 .toList();
+    }
+
+    // Paginated search method
+    @Cacheable(value = "hotel-search-paged", key = "#location + '-' + #roomCount + '-' + #checkIn + '-' + #checkOut + '-' + #discounted + '-page-' + #pageable.pageNumber + '-size-' + #pageable.pageSize",
+    unless = "#result.content.isEmpty()")
+    public PagedResponse<HotelResponse> searchPaged(String location, int guestCount, LocalDate checkIn, LocalDate checkOut, boolean discounted, Pageable pageable) {
+        List<Hotel> hotels = hotelRepository.findAllByLocationContainingIgnoreCase(location);
+
+        List<Hotel> availableHotels = hotels.stream()
+                .filter(hotel -> hasAvailableRoom(hotel, guestCount, checkIn, checkOut))
+                .toList();
+
+        // Manual pagination since we need to filter first
+        int totalElements = availableHotels.size();
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), totalElements);
+        
+        List<Hotel> pagedHotels = availableHotels.subList(start, end);
+        
+        List<HotelResponse> content = pagedHotels.stream()
+                .map(h -> new HotelResponse(h, discounted, getHotelRating(h.getId()) != null ? getHotelRating(h.getId()) : 0.0))
+                .toList();
+        
+        return new PagedResponse<>(content, pageable.getPageNumber(), pageable.getPageSize(), totalElements);
     }
 
     public List<RoomResponse> getHotelRooms(Long id, LocalDate checkIn, LocalDate checkOut, int guestCount) {
@@ -120,6 +157,63 @@ public class HotelService {
         }
 
         return roomRespons;
+    }
+
+    // Paginated version of getHotelRooms
+    public PagedResponse<RoomResponse> getHotelRoomsPaged(Long id, LocalDate checkIn, LocalDate checkOut, int guestCount, Pageable pageable) {
+        Hotel hotel = hotelRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Hotel not found!"));
+        
+        List<Room> rooms = hotel.getRooms();
+        List<RoomResponse> roomRespons = new ArrayList<>();
+        
+        // If dates are provided, check availability
+        if (checkIn != null && checkOut != null) {
+            log.info("Checking room availability for hotel ID: " + id + " with dates: " + checkIn + " - " + checkOut);
+            
+            for (Room room : rooms) {
+                List<RoomAvailability> availabilities = roomAvailabilityRepository
+                        .findByRoomIdAndDateBetween(room.getId(), checkIn, checkOut.minusDays(1));
+                
+                int totalDays = checkIn.until(checkOut).getDays();
+                boolean isAvailable = availabilities.size() == totalDays &&
+                        availabilities.stream().allMatch(a -> a.getAvailableCount() >= 1);
+                
+                if (isAvailable) {
+                    RoomResponse roomResponse = new RoomResponse(room, guestCount <= room.getGuestCount());
+                    roomResponse.setAvailablityList(availabilities.stream().map(roomAvailability -> new RoomAvailabilityResponse(roomAvailability.getAvailableCount(), roomAvailability.getDate())).toList());
+                    roomRespons.add(roomResponse);
+                } else {
+                    List<RoomAvailability> roomAvailabilities = roomAvailabilityRepository.findByRoomId(room.getId());
+                    RoomResponse roomResponse = new RoomResponse(room, false);
+                    roomResponse.setAvailablityList(roomAvailabilities.stream().map(roomAvailability ->
+                            new com.hotelbooking.common_model.RoomAvailabilityResponse(roomAvailability.getAvailableCount(), roomAvailability.getDate())
+                    ).toList());
+                    roomRespons.add(roomResponse);
+                }
+            }
+        } else {
+            roomRespons = rooms.stream()
+                    .map(room -> {
+                        List<RoomAvailability> roomAvailabilities = roomAvailabilityRepository.findByRoomId(room.getId());
+                        RoomResponse roomResponse = new RoomResponse(room, guestCount <= room.getGuestCount());
+                        roomResponse.setAvailablityList(roomAvailabilities.stream().map(roomAvailability ->
+                                new com.hotelbooking.common_model.RoomAvailabilityResponse(roomAvailability.getAvailableCount(), roomAvailability.getDate())
+                        ).toList());
+
+                        return roomResponse;
+                    })
+                    .toList();
+        }
+
+        // Manual pagination
+        int totalElements = roomRespons.size();
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), totalElements);
+        
+        List<RoomResponse> pagedRooms = roomRespons.subList(start, end);
+        
+        return new PagedResponse<>(pagedRooms, pageable.getPageNumber(), pageable.getPageSize(), totalElements);
     }
 
     public boolean isRoomAvailable(Long hotelId, UUID roomId, LocalDate checkIn, LocalDate checkOut, int guestCount) {
@@ -203,22 +297,22 @@ public class HotelService {
     }
 
     // Updated cache eviction methods
-    @CacheEvict(value = "hotel-list", key = "'all-true'")
+    @CacheEvict(value = {"hotel-list", "hotel-list-paged"}, key = "'all-true'")
     public void evictAllHotelsCacheDiscounted() {
         System.out.println("Evicted all hotels cache (discounted)");
     }
 
-    @CacheEvict(value = "hotel-list", key = "'all-false'")
+    @CacheEvict(value = {"hotel-list", "hotel-list-paged"}, key = "'all-false'")
     public void evictAllHotelsCacheRegular() {
         System.out.println("Evicted all hotels cache (regular)");
     }
 
-    @CacheEvict(value = {"hotel-list", "hotel-single"}, allEntries = true)
+    @CacheEvict(value = {"hotel-list", "hotel-list-paged", "hotel-single"}, allEntries = true)
     public void evictHotelCache(Long id) {
         System.out.println("Evicted hotel cache for ID: " + id);
     }
 
-    @CacheEvict(value = {"hotel-list", "hotel-single", "hotel-search", "hotels-by-location"}, allEntries = true)
+    @CacheEvict(value = {"hotel-list", "hotel-list-paged", "hotel-single", "hotel-search", "hotel-search-paged", "hotels-by-location"}, allEntries = true)
     public void evictAllCache() {
         System.out.println("Evicted all hotel-related caches");
     }
@@ -250,5 +344,21 @@ public class HotelService {
             System.err.println("Error: " + e.getMessage());
             return null;
         }
+    }
+
+    public Page<HotelResponse> findAllPaginated(Pageable pageable, boolean discounted) {
+        return hotelRepository.findAll(pageable).map(hotel -> new HotelResponse(hotel, discounted, getHotelRating(hotel.getId()) != null ? getHotelRating(hotel.getId()) : 0.0));
+    }
+
+    public Page<HotelResponse> searchPaginated(String location, int guestCount, LocalDate checkIn, LocalDate checkOut, boolean discounted, Pageable pageable) {
+        List<Hotel> hotels = hotelRepository.findAllByLocationContainingIgnoreCase(location);
+
+        List<Hotel> availableHotels = hotels.stream()
+                .filter(hotel -> hasAvailableRoom(hotel, guestCount, checkIn, checkOut))
+                .toList();
+
+        return availableHotels.stream()
+                .map(h -> new HotelResponse(h, discounted, getHotelRating(h.getId()) != null ? getHotelRating(h.getId()) : 0.0))
+                .collect(Collectors.toList());
     }
 }

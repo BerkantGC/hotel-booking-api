@@ -2,9 +2,13 @@ package com.hotelbooking.hotel_admin_service.controller;
 
 import com.hotelbooking.hotel_admin_service.dto.HotelDTO;
 import com.hotelbooking.common_model.Hotel;
+import com.hotelbooking.common_model.PagedResponse;
 import com.hotelbooking.hotel_admin_service.dto.HotelResponse;
 import com.hotelbooking.hotel_admin_service.service.HotelService;
 import com.hotelbooking.hotel_admin_service.util.AuthUtils;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,6 +30,22 @@ public class HotelController {
     @GetMapping
     public List<HotelResponse> getAll() {
         return service.getAllHotels(AuthUtils.getUserId());
+    }
+
+    @GetMapping("/paged")
+    public ResponseEntity<PagedResponse<HotelResponse>> getAllPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDir) {
+
+        Sort sort = sortDir.equalsIgnoreCase("desc") ?
+                Sort.by(sortBy).descending() :
+                Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        PagedResponse<HotelResponse> response = service.getAllHotelsPaged(AuthUtils.getUserId(), pageable);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping

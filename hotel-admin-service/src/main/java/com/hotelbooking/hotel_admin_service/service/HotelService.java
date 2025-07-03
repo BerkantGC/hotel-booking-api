@@ -1,15 +1,18 @@
 package com.hotelbooking.hotel_admin_service.service;
 
-import com.hotelbooking.hotel_admin_service.dto.HotelDTO;
 import com.hotelbooking.common_model.Hotel;
+import com.hotelbooking.common_model.PagedResponse;
+import com.hotelbooking.hotel_admin_service.dto.HotelDTO;
 import com.hotelbooking.hotel_admin_service.dto.HotelResponse;
 import com.hotelbooking.hotel_admin_service.repository.HotelRepository;
 import com.hotelbooking.hotel_admin_service.util.ImageUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class HotelService {
@@ -22,27 +25,55 @@ public class HotelService {
         this.imageUtils = imageUtils;
     }
 
-public List<HotelResponse> getAllHotels(Long adminId) {
-    List<Hotel> hotels = repository.findAllByAdminId(adminId);
-    List<HotelResponse> hotelDTOs = new ArrayList<>();
+    public List<HotelResponse> getAllHotels(Long adminId) {
+        List<Hotel> hotels = repository.findAllByAdminId(adminId);
+        List<HotelResponse> hotelDTOs = new ArrayList<>();
 
-    for (Hotel hotel : hotels) {
-        HotelResponse dto = new HotelResponse();
-        dto.setId(hotel.getId());
-        dto.setName(hotel.getName());
-        dto.setLocation(hotel.getLocation());
-        dto.setDescription(hotel.getDescription());
-        dto.setRoom_count(hotel.getRoomCount());
-        dto.setLatitude(hotel.getLatitude());
-        dto.setLongitude(hotel.getLongitude());
-        dto.setBasePrice(hotel.getBasePrice());
-        dto.setImage(hotel.getImage());
-        hotelDTOs.add(dto);
+        for (Hotel hotel : hotels) {
+            HotelResponse dto = new HotelResponse();
+            dto.setId(hotel.getId());
+            dto.setName(hotel.getName());
+            dto.setLocation(hotel.getLocation());
+            dto.setDescription(hotel.getDescription());
+            dto.setRoom_count(hotel.getRoomCount());
+            dto.setLatitude(hotel.getLatitude());
+            dto.setLongitude(hotel.getLongitude());
+            dto.setBasePrice(hotel.getBasePrice());
+            dto.setImage(hotel.getImage());
+            hotelDTOs.add(dto);
+        }
+
+        return hotelDTOs;
     }
 
-    return hotelDTOs;
-}
-    
+    // Paginated version
+    public PagedResponse<HotelResponse> getAllHotelsPaged(Long adminId, Pageable pageable) {
+        List<Hotel> hotels = repository.findAllByAdminId(adminId);
+
+        // Manual pagination since we need to filter by adminId
+        int totalElements = hotels.size();
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), totalElements);
+
+        List<Hotel> pagedHotels = hotels.subList(start, end);
+        List<HotelResponse> hotelDTOs = new ArrayList<>();
+
+        for (Hotel hotel : pagedHotels) {
+            HotelResponse dto = new HotelResponse();
+            dto.setId(hotel.getId());
+            dto.setName(hotel.getName());
+            dto.setLocation(hotel.getLocation());
+            dto.setDescription(hotel.getDescription());
+            dto.setRoom_count(hotel.getRoomCount());
+            dto.setLatitude(hotel.getLatitude());
+            dto.setLongitude(hotel.getLongitude());
+            dto.setBasePrice(hotel.getBasePrice());
+            dto.setImage(hotel.getImage());
+            hotelDTOs.add(dto);
+        }
+
+        return new PagedResponse<>(hotelDTOs, pageable.getPageNumber(), pageable.getPageSize(), totalElements);
+    }
 
     public Hotel addHotel(HotelDTO hotelDTO, Long adminId) {
         try {

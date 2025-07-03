@@ -7,9 +7,11 @@ import com.hotelbooking.comment_service.model.ServiceType;
 import com.hotelbooking.comment_service.repository.CommentRepository;
 import com.hotelbooking.comment_service.util.AuthUtils;
 import com.hotelbooking.common_model.BookingQueueDTO;
+import com.hotelbooking.common_model.PagedResponse;
 import com.hotelbooking.common_model.User;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -82,6 +84,23 @@ public class CommentService {
         List<Comment> comments = commentRepository.findByHotelId(hotelId);
 
         return comments.stream().map(this::getCommentResponse).toList();
+    }
+
+    // Paginated version
+    public PagedResponse<CommentResponse> getCommentsByHotelPaged(Long hotelId, Pageable pageable) {
+        List<Comment> comments = commentRepository.findByHotelId(hotelId);
+
+        // Manual pagination
+        int totalElements = comments.size();
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), totalElements);
+
+        List<Comment> pagedComments = comments.subList(start, end);
+        List<CommentResponse> content = pagedComments.stream()
+                .map(this::getCommentResponse)
+                .toList();
+
+        return new PagedResponse<>(content, pageable.getPageNumber(), pageable.getPageSize(), totalElements);
     }
 
     public Double getAverageRatingsByHotel(List<CommentResponse> commentResponses) {

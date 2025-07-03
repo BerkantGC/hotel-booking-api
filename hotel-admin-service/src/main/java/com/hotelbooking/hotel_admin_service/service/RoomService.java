@@ -5,6 +5,7 @@ import com.hotelbooking.hotel_admin_service.dto.RoomDTO;
 import com.hotelbooking.hotel_admin_service.repository.HotelRepository;
 import com.hotelbooking.hotel_admin_service.repository.RoomAvailabilityRepository;
 import com.hotelbooking.hotel_admin_service.repository.RoomRepository;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -85,5 +86,34 @@ public class RoomService {
         });
 
         return roomResponseList;
+    }
+
+    // Paginated version
+    public PagedResponse<RoomResponse> getRoomsPaged(Pageable pageable){
+        List<Room> rooms = roomRepository.findAll();
+        
+        // Manual pagination
+        int totalElements = rooms.size();
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), totalElements);
+        
+        List<Room> pagedRooms = rooms.subList(start, end);
+        List<RoomResponse> roomResponseList = new ArrayList<>();
+
+        pagedRooms.forEach(room -> {
+            List<RoomAvailability> roomAvailabilities = roomAvailabilityRepository.findByRoomId(room.getId());
+
+            RoomResponse roomResponse = new RoomResponse();
+            roomResponse.setId(room.getId());
+            roomResponse.setKind(room.getKind());
+            roomResponse.setHotel_id(room.getHotel().getId());
+            roomResponse.setAvailablityList(roomAvailabilities.stream().map(roomAvailability ->
+                    new RoomAvailabilityResponse(roomAvailability.getAvailableCount(), roomAvailability.getDate())
+            ).toList());
+
+            roomResponseList.add(roomResponse);
+        });
+
+        return new PagedResponse<>(roomResponseList, pageable.getPageNumber(), pageable.getPageSize(), totalElements);
     }
 }

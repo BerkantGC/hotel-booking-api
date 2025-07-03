@@ -6,9 +6,11 @@ import com.hotelbooking.booking_service.model.Booking;
 import com.hotelbooking.booking_service.repository.BookingRepository;
 import com.hotelbooking.booking_service.util.AuthUtils;
 import com.hotelbooking.common_model.BookingQueueDTO;
+import com.hotelbooking.common_model.PagedResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -74,6 +76,23 @@ public class BookingService {
         return bookings.stream()
                 .map(this::getBookingQueueDTO)
                 .toList();
+    }
+
+    // Paginated version
+    public PagedResponse<BookingQueueDTO> getBookingsPaged(Long userId, Pageable pageable) {
+        List<Booking> bookings = bookingRepository.findByUserId(userId);
+        
+        // Manual pagination
+        int totalElements = bookings.size();
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), totalElements);
+        
+        List<Booking> pagedBookings = bookings.subList(start, end);
+        List<BookingQueueDTO> content = pagedBookings.stream()
+                .map(this::getBookingQueueDTO)
+                .toList();
+
+        return new PagedResponse<>(content, pageable.getPageNumber(), pageable.getPageSize(), totalElements);
     }
 
     public BookingQueueDTO showBooking(Long bookingId, Long userId) {
