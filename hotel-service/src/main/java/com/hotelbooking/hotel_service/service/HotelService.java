@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -357,8 +358,16 @@ public class HotelService {
                 .filter(hotel -> hasAvailableRoom(hotel, guestCount, checkIn, checkOut))
                 .toList();
 
-        return availableHotels.stream()
+        List<HotelResponse> hotelResponses = availableHotels.stream()
                 .map(h -> new HotelResponse(h, discounted, getHotelRating(h.getId()) != null ? getHotelRating(h.getId()) : 0.0))
                 .collect(Collectors.toList());
+
+        // Apply pagination manually
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), hotelResponses.size());
+        
+        List<HotelResponse> pageContent = hotelResponses.subList(start, end);
+        
+        return new PageImpl<>(pageContent, pageable, hotelResponses.size());
     }
 }
